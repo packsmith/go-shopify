@@ -304,7 +304,7 @@ func NewClient(app App, shopName, token string, opts ...Option) *Client {
 // response. It does not make much sense to call Do without a prepared
 // interface instance.
 func (c *Client) Do(req *http.Request, v interface{}) error {
-	_, err := c.doGetHeaders(req, v)
+	_, err := c.DoGetHeaders(req, v)
 	if err != nil {
 		return err
 	}
@@ -312,8 +312,8 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	return nil
 }
 
-// doGetHeaders executes a request, decoding the response into `v` and also returns any response headers.
-func (c *Client) doGetHeaders(req *http.Request, v interface{}) (http.Header, error) {
+// DoGetHeaders executes a request, decoding the response into `v` and also returns any response headers.
+func (c *Client) DoGetHeaders(req *http.Request, v interface{}) (http.Header, error) {
 	var resp *http.Response
 	var err error
 	retries := c.retries
@@ -607,7 +607,7 @@ func (c *Client) createAndDoGetHeaders(method, relPath string, data, options, re
 		return nil, err
 	}
 
-	return c.doGetHeaders(req, resource)
+	return c.DoGetHeaders(req, resource)
 }
 
 // Get performs a GET request for the given path and saves the result in the
