@@ -171,6 +171,11 @@ func orderTests(t *testing.T, order Order) {
 		t.Errorf("Order.TotalPrice returned %+v, expected %+v", order.TotalPrice, p)
 	}
 
+	ctp := decimal.NewFromFloat(9.5)
+	if !ctp.Equals(*order.CurrentTotalPrice) {
+		t.Errorf("Order.CurrentTotalPrice returned %+v, expected %+v", order.CurrentTotalPrice, ctp)
+	}
+
 	// Check null prices, notice that prices are usually not empty.
 	if order.TotalTax != nil {
 		t.Errorf("Order.TotalTax returned %+v, expected %+v", order.TotalTax, nil)
@@ -251,7 +256,7 @@ func TestOrderListOptions(t *testing.T) {
 			Fields: "id,name",
 		},
 
-		Status: "any",
+		Status: OrderStatusAny,
 	}
 
 	orders, err := client.Order.List(options)
@@ -365,7 +370,7 @@ func TestOrderCreate(t *testing.T) {
 
 	order := Order{
 		LineItems: []LineItem{
-			LineItem{
+			{
 				VariantID: 1,
 				Quantity:  1,
 			},
@@ -392,8 +397,8 @@ func TestOrderUpdate(t *testing.T) {
 
 	order := Order{
 		ID:                1,
-		FinancialStatus:   "paid",
-		FulfillmentStatus: "fulfilled",
+		FinancialStatus:   OrderFinancialStatusPaid,
+		FulfillmentStatus: OrderFulfillmentStatusFulfilled,
 	}
 
 	o, err := client.Order.Update(order)
@@ -548,8 +553,7 @@ func TestOrderCreateMetafield(t *testing.T) {
 	metafield := Metafield{
 		Key:       "app_key",
 		Value:     "app_value",
-		ValueType: "string",
-		Type:      "single_line_text_field",
+		Type:      MetafieldTypeSingleLineTextField,
 		Namespace: "affiliates",
 	}
 
@@ -572,8 +576,7 @@ func TestOrderUpdateMetafield(t *testing.T) {
 		ID:        2,
 		Key:       "app_key",
 		Value:     "app_value",
-		ValueType: "string",
-		Type:      "single_line_text_field",
+		Type:      MetafieldTypeSingleLineTextField,
 		Namespace: "affiliates",
 	}
 
@@ -757,6 +760,19 @@ func TestOrderCancelFulfillment(t *testing.T) {
 	}
 
 	FulfillmentTests(t, *returnedFulfillment)
+}
+
+func TestOrderDelete(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("DELETE", fmt.Sprintf("https://fooshop.myshopify.com/%s/orders/1.json", client.pathPrefix),
+		httpmock.NewStringResponder(200, "{}"))
+
+	err := client.Order.Delete(1)
+	if err != nil {
+		t.Errorf("Order.Delete returned error: %v", err)
+	}
 }
 
 // TestLineItemUnmarshalJSON tests unmarsalling a LineItem from json
@@ -1145,6 +1161,10 @@ func testShippingLines(t *testing.T, expected, actual ShippingLines) {
 		t.Errorf("ShippingLines.CarrierIdentifier should be (%v), was (%v)", expected.CarrierIdentifier, actual.CarrierIdentifier)
 	}
 
+	if actual.Handle != expected.Handle {
+		t.Errorf("ShippingLines.Handle should be (%v), was (%v)", expected.Handle, actual.Handle)
+	}
+
 	testTaxLines(t, expected.TaxLines, actual.TaxLines)
 }
 
@@ -1157,7 +1177,7 @@ func propertiesEmptyStructLientItem() LineItem {
 func propertiesStructLientItem() LineItem {
 	return LineItem{
 		Properties: []NoteAttribute{
-			NoteAttribute{
+			{
 				Name:  "property 1",
 				Value: float64(3),
 			},
@@ -1193,11 +1213,11 @@ func validLineItem() LineItem {
 		VariantInventoryManagement: "shopify",
 		PreTaxPrice:                &preTaxPrice,
 		Properties: []NoteAttribute{
-			NoteAttribute{
+			{
 				Name:  "note 1",
 				Value: "one",
 			},
-			NoteAttribute{
+			{
 				Name:  "note 2",
 				Value: float64(2),
 			},
@@ -1205,14 +1225,14 @@ func validLineItem() LineItem {
 		ProductExists:       true,
 		FulfillableQuantity: 1,
 		Grams:               100,
-		FulfillmentStatus:   "partial",
+		FulfillmentStatus:   OrderFulfillmentStatusPartial,
 		TaxLines: []TaxLine{
-			TaxLine{
+			{
 				Title: "State tax",
 				Price: &tl1Price,
 				Rate:  &tl1Rate,
 			},
-			TaxLine{
+			{
 				Title: "Federal tax",
 				Price: &tl2Price,
 				Rate:  &tl2Rate,
@@ -1264,7 +1284,7 @@ func validLineItem() LineItem {
 		DiscountAllocations: []DiscountAllocations{
 			{
 				Amount: &discountAllocationAmount,
-				AmountSet: AmountSet{
+				AmountSet: &AmountSet{
 					ShopMoney: AmountSetEntry{
 						Amount:       &discountAllocationAmount,
 						CurrencyCode: "EUR",
@@ -1281,15 +1301,37 @@ func validLineItem() LineItem {
 
 func validShippingLines() ShippingLines {
 	price := decimal.New(400, -2)
+	eurPrice := decimal.New(317, -2)
 	tl1Price := decimal.New(1350, -2)
 	tl1Rate := decimal.New(6, -2)
 	tl2Price := decimal.New(1250, -2)
 	tl2Rate := decimal.New(5, -2)
 
 	return ShippingLines{
-		ID:                            int64(254721542),
-		Title:                         "Small Packet International Air",
-		Price:                         &price,
+		ID:    int64(254721542),
+		Title: "Small Packet International Air",
+		Price: &price,
+		PriceSet: &AmountSet{
+			ShopMoney: AmountSetEntry{
+				Amount:       &price,
+				CurrencyCode: "USD",
+			},
+			PresentmentMoney: AmountSetEntry{
+				Amount:       &eurPrice,
+				CurrencyCode: "EUR",
+			},
+		},
+		DiscountedPrice: &price,
+		DiscountedPriceSet: &AmountSet{
+			ShopMoney: AmountSetEntry{
+				Amount:       &price,
+				CurrencyCode: "USD",
+			},
+			PresentmentMoney: AmountSetEntry{
+				Amount:       &eurPrice,
+				CurrencyCode: "EUR",
+			},
+		},
 		Code:                          "INT.TP",
 		Source:                        "canada_post",
 		Phone:                         "",
@@ -1308,5 +1350,6 @@ func validShippingLines() ShippingLines {
 				Rate:  &tl2Rate,
 			},
 		},
+		Handle: "test",
 	}
 }

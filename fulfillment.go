@@ -43,22 +43,45 @@ type FulfillmentServiceOp struct {
 
 // Fulfillment represents a Shopify fulfillment.
 type Fulfillment struct {
-	ID              int64      `json:"id,omitempty"`
-	OrderID         int64      `json:"order_id,omitempty"`
-	LocationID      int64      `json:"location_id,omitempty"`
-	Status          string     `json:"status,omitempty"`
-	CreatedAt       *time.Time `json:"created_at,omitempty"`
-	Service         string     `json:"service,omitempty"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
-	TrackingCompany string     `json:"tracking_company,omitempty"`
-	ShipmentStatus  string     `json:"shipment_status,omitempty"`
-	TrackingNumber  string     `json:"tracking_number,omitempty"`
-	TrackingNumbers []string   `json:"tracking_numbers,omitempty"`
-	TrackingUrl     string     `json:"tracking_url,omitempty"`
-	TrackingUrls    []string   `json:"tracking_urls,omitempty"`
-	Receipt         Receipt    `json:"receipt,omitempty"`
-	LineItems       []LineItem `json:"line_items,omitempty"`
-	NotifyCustomer  bool       `json:"notify_customer"`
+	ID                          int64                        `json:"id,omitempty"`
+	OrderID                     int64                        `json:"order_id,omitempty"`
+	LocationID                  int64                        `json:"location_id,omitempty"`
+	Status                      string                       `json:"status,omitempty"`
+	CreatedAt                   *time.Time                   `json:"created_at,omitempty"`
+	Service                     string                       `json:"service,omitempty"`
+	UpdatedAt                   *time.Time                   `json:"updated_at,omitempty"`
+	TrackingCompany             string                       `json:"tracking_company,omitempty"`
+	ShipmentStatus              string                       `json:"shipment_status,omitempty"`
+	TrackingInfo                FulfillmentTrackingInfo      `json:"tracking_info,omitempty"`
+	TrackingNumber              string                       `json:"tracking_number,omitempty"`
+	TrackingNumbers             []string                     `json:"tracking_numbers,omitempty"`
+	TrackingUrl                 string                       `json:"tracking_url,omitempty"`
+	TrackingUrls                []string                     `json:"tracking_urls,omitempty"`
+	Receipt                     Receipt                      `json:"receipt,omitempty"`
+	LineItems                   []LineItem                   `json:"line_items,omitempty"`
+	LineItemsByFulfillmentOrder []LineItemByFulfillmentOrder `json:"line_items_by_fulfillment_order,omitempty"`
+	NotifyCustomer              bool                         `json:"notify_customer"`
+}
+
+// FulfillmentTrackingInfo represents the tracking information used to create a Fulfillment.
+// https://shopify.dev/docs/api/admin-rest/2023-01/resources/fulfillment#post-fulfillments
+type FulfillmentTrackingInfo struct {
+	Company string `json:"company,omitempty"`
+	Number  string `json:"number,omitempty"`
+	Url     string `json:"url,omitempty"`
+}
+
+// LineItemByFulfillmentOrder represents the FulfillmentOrders (and optionally the items) used to create a Fulfillment.
+// https://shopify.dev/docs/api/admin-rest/2023-01/resources/fulfillment#post-fulfillments
+type LineItemByFulfillmentOrder struct {
+	FulfillmentOrderID        int64                                    `json:"fulfillment_order_id,omitempty"`
+	FulfillmentOrderLineItems []LineItemByFulfillmentOrderItemQuantity `json:"fulfillment_order_line_items,omitempty"`
+}
+
+// LineItemByFulfillmentOrderItemQuantity represents the quantity to fulfill for one item.
+type LineItemByFulfillmentOrderItemQuantity struct {
+	Id       int64 `json:"id"`
+	Quantity int64 `json:"quantity"`
 }
 
 // Receipt represents a Shopify receipt.
